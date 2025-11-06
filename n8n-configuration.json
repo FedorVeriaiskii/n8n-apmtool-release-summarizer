@@ -1,0 +1,891 @@
+{
+  "name": "APM-Tool release summarizer agent",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "APM-Tool release notes summarizer",
+        "formDescription": "= These release notes for APM-Tool updates—showcasing new features, changes, and bug fixes. ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Select the Dynatrace elements:",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "APM-Tool Managed"
+                  },
+                  {
+                    "option": "OneAgent"
+                  },
+                  {
+                    "option": "ActiveGate"
+                  },
+                  {
+                    "option": "API"
+                  },
+                  {
+                    "option": "Operator"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Summary format",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "PDF"
+                  },
+                  {
+                    "option": "DOC"
+                  },
+                  {
+                    "option": "Email"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "buttonLabel": "Summarize latest release notes"
+        }
+      },
+      "id": "792bcf14-6e04-49dc-bfa7-0c3f0d966524",
+      "name": "🧩 Release Notes Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        -2336,
+        800
+      ],
+      "webhookId": "3e762442-715e-47e1-a65e-ae92085857ae",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Search in {{ $json.bodyContent }}:\n1) Find the URL link for the latest release version:\n- If {{ $json.dynatraceComponent }} is equal to “managed”, search for URL links that contain the word “Version”.\n- If {{ $json.dynatraceComponent }} is not equal to “managed”, search for URL links that contain the word “{{ $json.dynatraceComponent }}”.\n\n2) Find the latest release number and the full URL to the latest release page.\n\n3) additionally output \"dynatraceOutput\" field, containing the value {{ $json.dynatraceComponent }} in case-sensitive format \n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a helpful assistant"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -720,
+        1040
+      ],
+      "id": "5c5d3176-180d-43e7-b4e5-254a917ad635",
+      "name": "🤖 AI Agent — Find Latest Release URL",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -752,
+        1264
+      ],
+      "id": "a0ba344c-07c8-40a8-86f6-c3e544cb32d2",
+      "name": "🧠 OpenAI GPT Model (URL Finder)",
+      "credentials": {
+        "openAiApi": {
+          "id": "xxx",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://docs.dynatrace.com/managed/whats-new/managed",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        400
+      ],
+      "id": "1481a87b-6ec2-419e-bad8-dbf5f1d8985f",
+      "name": "🌐 HTTP Request — Dynatrace Managed Page",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=1. Read the ENTIRE page content: https://docs.dynatrace.com/managed{{ $json.output.latestRelease.url }}\n2. Extract and categorize the information into the following specific sections:\n- BREAKING CHANGES: Extract any breaking changes, deprecations, removed features, or changes. If none exist, state \"No breaking changes reported for this version.\"\n\n- ANNOUNCEMENTS: Extract important announcements, general information, roadmap updates, or high-level communications about the {{ $json['[\\'Select the Dynatrace elements:\\']'] }} release. If none exist, state \"No major announcements for this version.\n\n- TECHNOLOGY SUPPORT: Extract information about technology support updates, platform compatibility changes, new supported technologies, operating system support, or infrastructure requirements. If none exist, state \"No technology support updates for this version\".\n\n- NEW FEATURES: Extract new features, capabilities, enhancements, or functionality additions introduced in this version. If none exist, state \"No new features in this version.\"\n\n- RESOLVED ISSUES: Extract bug fixes, resolved issues, performance improvements, or stability enhancements. If none exist, state \"No resolved issues reported for this version.\"\n\nPlease ensure you access the complete content of the release notes and categorize each piece of information appropriately.\n\n3. additionally output \"dynatraceOutput\" field, containing the value {{ $json.output.dynatraceComponent }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1616,
+        96
+      ],
+      "id": "ccd5e725-f847-480f-aa0c-44ca310bcda4",
+      "name": "🤖 AI Agent — Summarize Release Notes",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1664,
+        320
+      ],
+      "id": "272e078c-3bd7-44b6-b45b-f1635abc7196",
+      "name": "🧠 OpenAI GPT Model (Summarizer)",
+      "credentials": {
+        "openAiApi": {
+          "id": "xxx",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('URL', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        -1536,
+        320
+      ],
+      "id": "bf07bc96-2332-4f2b-8c2b-9a98544b80d2",
+      "name": "🌐 HTTP Request (AI Tool Access)",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const htmlPage = $input.all()[0]?.json?.data;\nconst bodyContent = htmlPage.match(/<body[^>]*>([\\s\\S]*?)<\\/body>/i)[1];\n\nreturn [{ json: { bodyContent: bodyContent, dynatraceComponent: $('🔁 Loop Through Selected Components').first().json['[\\'Select the Dynatrace elements:\\']'] } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        752
+      ],
+      "id": "915ec790-40ec-43a9-8676-736313a64e4a",
+      "name": "💻 Extract HTML Body and Component"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json['[\\'Select the Dynatrace elements:\\']'] }}",
+                    "rightValue": "=APM-Tool Managed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "127e4978-b43f-4c9c-baae-cf9ec67489c2"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "=APM-Tool Managed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e1b1d8f8-0cd4-4768-b103-aae7d3fbd5b6",
+                    "leftValue": "={{ $json['[\\'Select the Dynatrace elements:\\']'] }}",
+                    "rightValue": "OneAgent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "=OneAgent"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4f6faf52-8334-4392-a5f5-2029cad233b9",
+                    "leftValue": "={{ $json['[\\'Select the Dynatrace elements:\\']'] }}",
+                    "rightValue": "ActiveGate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "=ActiveGate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0ea2257b-a707-427a-8598-bda4018cff37",
+                    "leftValue": "={{ $json['[\\'Select the Dynatrace elements:\\']'] }}",
+                    "rightValue": "API",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "api"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "914f674c-31b9-4522-a684-a95c00e53cc8",
+                    "leftValue": "={{ $json['[\\'Select the Dynatrace elements:\\']'] }}",
+                    "rightValue": "Operator",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "operator"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1552,
+        752
+      ],
+      "id": "d816047d-2984-48ab-a195-2fec8e971645",
+      "name": "🔀 Route by Selected Dynatrace Component"
+    },
+    {
+      "parameters": {
+        "url": "https://docs.dynatrace.com/managed/whats-new/activegate",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        784
+      ],
+      "id": "22fb47c7-500e-47d8-b7e9-4bcfc5223de4",
+      "name": "🌐 HTTP Request — ActiveGate Page",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "https://docs.dynatrace.com/managed/whats-new/oneagent",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        592
+      ],
+      "id": "76eb814d-8b0e-4901-8245-9865e79f09d3",
+      "name": "🌐 HTTP Request — OneAgent Page",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "https://docs.dynatrace.com/managed/whats-new/dynatrace-api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        976
+      ],
+      "id": "d1ee418e-63b9-4763-993b-9660ed3bd091",
+      "name": "🌐 HTTP Request — Dynatrace API Page",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "https://docs.dynatrace.com/managed/whats-new/dynatrace-operator",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        1168
+      ],
+      "id": "cef71cd3-c900-4d9f-8441-fb90af78312d",
+      "name": "🌐 HTTP Request — Dynatrace Operator Page",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "['Select the Dynatrace elements:']",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -2112,
+        800
+      ],
+      "id": "e828dae7-6a12-4192-98ec-1db34c2b20b7",
+      "name": "✂️ Split Dynatrace Elements for Processing"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1888,
+        800
+      ],
+      "id": "1417764c-23e3-4a07-9224-de87866b57fb",
+      "name": "🔁 Loop Through Selected Components"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "output"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        96
+      ],
+      "id": "6f11e6b4-8aea-4abb-99e6-9dee089d6439",
+      "name": "📦 Aggregate Summarized Release Data"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"dynatraceComponent\": \"string\",\n\t\"version\": \"string\",\n    \"summary\": \"string\"\n  \n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1408,
+        320
+      ],
+      "id": "afa20484-cc38-4bd0-9838-54a39141a569",
+      "name": "🧩 Structured Output Parser (Summary JSON)"
+    },
+    {
+      "parameters": {
+        "sendTo": "fedor.veriaiskii@gmail.com",
+        "subject": "Dynatrace Summary report",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -256,
+        96
+      ],
+      "id": "3f96d880-7f83-4379-9949-ed61cfc8a491",
+      "name": "📧 Send Release Summary Email",
+      "webhookId": "d8749784-d058-40d6-bcf6-bae05bc0c3de",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xxx",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"dynatraceComponent\": \"string\",\n  \"latestRelease\": {\n    \"version\": \"string\",\n    \"url\": \"string\"\n  }\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -624,
+        1264
+      ],
+      "id": "cb16be12-d509-4403-a55d-d938bd17864c",
+      "name": "🧩 Structured Output Parser (URL Finder JSON)",
+      "autoFix": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -624,
+        1392
+      ],
+      "id": "351dea25-f18e-4788-a620-71326a602a86",
+      "name": "🧠 OpenAI GPT Model (Parser)",
+      "credentials": {
+        "openAiApi": {
+          "id": "xxx",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Generates APM Tool release notes HTML markup from template and data array\n * @param {Array} releaseNotesData - Array of objects with properties: dynatraceComponent, version, summary\n * @returns {string} - Complete HTML markup with populated release notes\n */\nfunction generateReleaseNotesHTML(releaseNotesData) {\n    // Validate input\n    if (!Array.isArray(releaseNotesData)) {\n        throw new Error('Input must be an array of release note objects');\n    }\n\n    // Get current date in DD.MM.YYYY format\n    const today = new Date();\n    const formattedDate = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;\n\n    // HTML template with placeholders\n    const htmlTemplate = `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>APM Tool Release Notes - ${formattedDate}</title>\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n\n        body {\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            line-height: 1.6;\n            color: #333;\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            min-height: 100vh;\n            padding: 20px;\n        }\n\n        .container {\n            max-width: 800px;\n            margin: 0 auto;\n            background: white;\n            border-radius: 12px;\n            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);\n            overflow: hidden;\n        }\n\n        .header {\n            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);\n            color: white;\n            padding: 40px 30px;\n            text-align: center;\n        }\n\n        .header h1 {\n            font-size: 2.5em;\n            margin-bottom: 10px;\n            font-weight: 300;\n        }\n\n        .header p {\n            font-size: 1.1em;\n            opacity: 0.9;\n        }\n\n        .content {\n            padding: 40px 30px;\n        }\n\n        .release-notes {\n            list-style: none;\n        }\n\n        .release-note {\n            background: #f8f9fa;\n            border-left: 4px solid #2a5298;\n            padding: 25px;\n            margin-bottom: 20px;\n            border-radius: 0 8px 8px 0;\n            transition: transform 0.2s ease, box-shadow 0.2s ease;\n        }\n\n        .release-note:hover {\n            transform: translateY(-2px);\n            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);\n        }\n\n        .component-name {\n            font-size: 1.4em;\n            font-weight: 600;\n            color: #1e3c72;\n            margin-bottom: 10px;\n            display: flex;\n            align-items: center;\n        }\n\n        .component-name::before {\n            content: \"🔧\";\n            margin-right: 10px;\n            font-size: 1.2em;\n        }\n\n        .component-description {\n            font-size: 1em;\n            color: #555;\n            line-height: 1.7;\n        }\n\n        .footer {\n            background: #f1f3f4;\n            text-align: center;\n            padding: 20px;\n            color: #666;\n            font-size: 0.9em;\n        }\n\n        @media (max-width: 768px) {\n            .container {\n                margin: 10px;\n                border-radius: 8px;\n            }\n            \n            .header {\n                padding: 30px 20px;\n            }\n            \n            .header h1 {\n                font-size: 2em;\n            }\n            \n            .content {\n                padding: 30px 20px;\n            }\n            \n            .release-note {\n                padding: 20px;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <header class=\"header\">\n            <h1>APM Tool release notes for ${formattedDate}</h1>\n            <p>List of release notes for APM Tool components</p>\n        </header>\n        \n        <main class=\"content\">\n            <ul class=\"release-notes\">\n                {{RELEASE_NOTES_CONTENT}}\n            </ul>\n        </main>\n        \n        <footer class=\"footer\">\n            <p>© 2025 APM Tool - Application Performance Monitoring Solution</p>\n        </footer>\n    </div>\n</body>\n</html>`;\n\n    // Generate release notes content\n    const releaseNotesContent = releaseNotesData.map(item => {\n        // Validate required properties\n        const dynatraceComponent = item.dynatraceComponent || 'Unknown Component';\n        const version = item.version || 'Unknown Version';\n        const summary = item.summary || 'No summary available';\n        \n        // Escape HTML to prevent XSS attacks\n        const escapedComponent = escapeHtml(dynatraceComponent);\n        const escapedVersion = escapeHtml(version);\n        let escapedSummary = escapeHtml(summary);\n        escapedSummary = formatTopicNames(escapedSummary);\n        \n        return `                <li class=\"release-note\">\n                    <div class=\"component-name\">${escapedComponent} ${escapedVersion}</div>\n                    <div class=\"component-description\">\n                        ${escapedSummary}\n                    </div>\n                </li>`;\n    }).join('\\n');\n\n    // Replace placeholder with generated content\n    const finalHTML = htmlTemplate.replace('{{RELEASE_NOTES_CONTENT}}', releaseNotesContent);\n    \n    return finalHTML;\n}\n\n/**\n * Escapes HTML special characters to prevent XSS attacks\n * @param {string} text - Text to escape\n * @returns {string} - Escaped text\n */\nfunction escapeHtml(text) {\n    if (typeof text !== 'string') {\n        return String(text);\n    }\n    \n    const map = {\n        '&': '&amp;',\n        '<': '&lt;',\n        '>': '&gt;',\n        '\"': '&quot;',\n        \"'\": '&#39;'\n    };\n    \n    return text.replace(/[&<>\"']/g, (m) => map[m]);\n}\n\n/**\n * Formats topic names in text with proper line breaks and padding\n * @param {string} text - Text containing topic names (e.g., \"ANNOUNCEMENTS:\", \"BREAKING CHANGES:\")\n * @returns {string} - Formatted text with proper spacing\n */\nfunction formatTopicNames(text) {\n    if (typeof text !== 'string') {\n        return String(text);\n    }\n    \n    // Regular expression to match topic names (capital letters/words followed by colon)\n    const topicRegex = /([A-Z][A-Z\\s\\/]*:)/g;\n    \n    let formattedText = text;\n    let isFirstTopic = true;\n    \n    // Replace each topic name with proper formatting\n    formattedText = formattedText.replace(topicRegex, (match, topicName) => {\n        if (isFirstTopic) {\n            isFirstTopic = false;\n            // First topic: just add line break after colon\n            return topicName + '<br>';\n        } else {\n            // Subsequent topics: add 2 empty lines before + line break after colon\n            return '<br><br>' + topicName + '<br>';\n        }\n    });\n    \n    return formattedText;\n}\n\nreturn {\n  \"result\": generateReleaseNotesHTML($input.first().json.output)\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        96
+      ],
+      "id": "d6af1aae-43aa-4709-8779-0c6352daad42",
+      "name": "💻 Generate HTML Summary Report"
+    },
+    {
+      "parameters": {
+        "html": "{{ $json.result }}"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -624,
+        96
+      ],
+      "id": "28383ff9-bb94-4877-bd88-9a3d23e77cd5",
+      "name": "🌐 Create Final HTML Document"
+    },
+    {
+      "parameters": {
+        "content": "Routing & HTTP Requests\nNodes that route per-component and perform HTTP requests to respective docs pages. These nodes feed the extractor and AI agents."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1008,
+        400
+      ],
+      "typeVersion": 1,
+      "id": "93f24828-0cb7-4c11-97d7-fc494314cd7f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Form / Trigger\nThis group contains the form trigger that starts the workflow and splits selected Dynatrace components for processing. Inputs: selected components and summary format."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2288,
+        592
+      ],
+      "typeVersion": 1,
+      "id": "9f9affcf-296b-431d-a2bf-e1b469dce858",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "URL Finder Group\nContains nodes that fetch component-specific 'what's new' pages and an AI agent that extracts the latest release URL and version for each component."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -704,
+        816
+      ],
+      "typeVersion": 1,
+      "id": "ea87f44c-7220-45e9-ace8-c206833c644e",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Summarizer Group\nThis cluster runs the AI summarizer agent and its language model. It reads the fetched release notes page content and extracts categorized sections (Breaking changes, Announcements, New features, Resolved issues)."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1440,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "6e950d9f-fdff-41c1-944d-aaa0e14aed52",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Aggregation / HTML / Email\nAggregates parsed summaries, generates the HTML report, creates final HTML document and emails the result. Outputs: HTML summary and email sent."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -736,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "dedaa307-b274-4d82-9f1f-2a9f1c4736df",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🌐 HTTP Request — Dynatrace Managed Page": {
+      "main": [
+        [
+          {
+            "node": "💻 Extract HTML Body and Component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Agent — Find Latest Release URL": {
+      "main": [
+        [
+          {
+            "node": "🔁 Loop Through Selected Components",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 OpenAI GPT Model (Summarizer)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 AI Agent — Summarize Release Notes",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP Request (AI Tool Access)": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 AI Agent — Summarize Release Notes",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Extract HTML Body and Component": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Agent — Find Latest Release URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Agent — Summarize Release Notes": {
+      "main": [
+        [
+          {
+            "node": "📦 Aggregate Summarized Release Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Route by Selected Dynatrace Component": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP Request — Dynatrace Managed Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🌐 HTTP Request — OneAgent Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🌐 HTTP Request — ActiveGate Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🌐 HTTP Request — Dynatrace API Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🌐 HTTP Request — Dynatrace Operator Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP Request — ActiveGate Page": {
+      "main": [
+        [
+          {
+            "node": "💻 Extract HTML Body and Component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP Request — Dynatrace API Page": {
+      "main": [
+        [
+          {
+            "node": "💻 Extract HTML Body and Component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP Request — Dynatrace Operator Page": {
+      "main": [
+        [
+          {
+            "node": "💻 Extract HTML Body and Component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP Request — OneAgent Page": {
+      "main": [
+        [
+          {
+            "node": "💻 Extract HTML Body and Component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✂️ Split Dynatrace Elements for Processing": {
+      "main": [
+        [
+          {
+            "node": "🔁 Loop Through Selected Components",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔁 Loop Through Selected Components": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Agent — Summarize Release Notes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 Route by Selected Dynatrace Component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Structured Output Parser (Summary JSON)": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "🤖 AI Agent — Summarize Release Notes",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Aggregate Summarized Release Data": {
+      "main": [
+        [
+          {
+            "node": "💻 Generate HTML Summary Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Structured Output Parser (URL Finder JSON)": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "🤖 AI Agent — Find Latest Release URL",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 OpenAI GPT Model (Parser)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🧩 Structured Output Parser (URL Finder JSON)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Generate HTML Summary Report": {
+      "main": [
+        [
+          {
+            "node": "🌐 Create Final HTML Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Create Final HTML Document": {
+      "main": [
+        [
+          {
+            "node": "📧 Send Release Summary Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 OpenAI GPT Model (URL Finder)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 AI Agent — Find Latest Release URL",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Release Notes Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "✂️ Split Dynatrace Elements for Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5de15644-d39b-4e76-a555-2cebf3f1a301",
+  "meta": {
+    "instanceId": "6547f008cdc23d2a2e4e99383735335d79a8e3f9b9b731ec8256f1793f0ebebb"
+  },
+  "id": "mlEHX3oIyzhPf96u",
+  "tags": []
+}
